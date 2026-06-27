@@ -5,166 +5,7 @@
 @section('page_title', 'Dashboard')
 
 @section('content')
-    @php
-        /*
-        |--------------------------------------------------------------------------
-        | Employee Dashboard Data
-        |--------------------------------------------------------------------------
-        | This dashboard uses attendance_rules() helper.
-        | Make sure helper is autoloaded in composer.json.
-        */
-
-        $attendanceRules = function_exists('attendance_rules') ? attendance_rules() : [];
-
-        $fullDetails = data_get($attendanceRules, 'full_details', []);
-        $employee = data_get($fullDetails, 'employee') ?? auth()->user();
-
-        $userName = $employee->name ?? 'Employee';
-        $firstName = explode(' ', $userName)[0] ?? 'Employee';
-
-        $basic = data_get($fullDetails, 'basic', []);
-        $companyDetails = data_get($fullDetails, 'company_details', []);
-        $salaryDetails = data_get($fullDetails, 'salary_details', []);
-        $leaveDetails = data_get($fullDetails, 'leave_details', []);
-        $attendanceDetails = data_get($fullDetails, 'attendance_details', []);
-        $assetDetails = data_get($fullDetails, 'asset_details', []);
-        $otherDetails = data_get($fullDetails, 'other_details', []);
-        $counts = data_get($fullDetails, 'counts', []);
-
-        $company = data_get($companyDetails, 'company');
-        $branch = data_get($companyDetails, 'branch');
-        $department = data_get($companyDetails, 'department');
-        $post = data_get($companyDetails, 'post');
-        $officeTime = data_get($companyDetails, 'office_time');
-        $supervisor = data_get($companyDetails, 'supervisor');
-
-        $employeeAccount = data_get($salaryDetails, 'account');
-        $employeeSalary = data_get($salaryDetails, 'salary');
-        $payslips = collect(data_get($salaryDetails, 'payslips', []));
-
-        $leaveTypes = collect(data_get($leaveDetails, 'leave_types', []));
-        $leaveRequests = collect(data_get($leaveDetails, 'leave_requests', []));
-        $timeLeaves = collect(data_get($leaveDetails, 'time_leaves', []));
-
-        $todayAttendances = collect(data_get($attendanceDetails, 'today', []));
-        $recentAttendances = collect(data_get($attendanceDetails, 'recent', []));
-
-        $assetAssignments = collect(data_get($assetDetails, 'assignments', []));
-        $assets = collect(data_get($assetDetails, 'assets', []));
-
-        $tadas = collect(data_get($otherDetails, 'tadas', []));
-        $advanceSalaries = collect(data_get($otherDetails, 'advance_salaries', []));
-        $awards = collect(data_get($otherDetails, 'awards', []));
-        $teamMeetings = collect(data_get($otherDetails, 'team_meetings', []));
-        $realNotices = collect(data_get($otherDetails, 'notices', []));
-
-        $officeOpening = data_get($attendanceRules, 'office_time.opening_time', $officeTime->opening_time ?? '09:00:00');
-        $officeClosing = data_get($attendanceRules, 'office_time.closing_time', $officeTime->closing_time ?? '18:00:00');
-
-        $officeOpeningInput = \Carbon\Carbon::parse($officeOpening)->format('H:i');
-        $officeClosingInput = \Carbon\Carbon::parse($officeClosing)->format('H:i');
-
-        $canCheckIn = data_get($attendanceRules, 'permissions.can_check_in', false);
-        $canCheckOut = data_get($attendanceRules, 'permissions.can_check_out', false);
-
-        $todayCheckInCount = data_get($attendanceRules, 'today_counts.check_in', 0);
-        $todayCheckOutCount = data_get($attendanceRules, 'today_counts.check_out', 0);
-        $hasOpenAttendance = $todayAttendances
-            ->whereNotNull('check_in_at')
-            ->whereNull('check_out_at')
-            ->isNotEmpty();
-        $attendanceActionRoute = $hasOpenAttendance ? route('attendance.check-out') : route('attendance.check-in');
-        $attendanceActionLabel = $hasOpenAttendance ? 'Check Out' : 'Check In';
-
-        $maxCheckIn = data_get($attendanceRules, 'limits.max_check_in', 3);
-        $maxCheckOut = data_get($attendanceRules, 'limits.max_check_out', 3);
-
-        $isWithinOfficeTime = data_get($attendanceRules, 'office_time.is_within_office_time', false);
-
-        $leaveBalance = [
-            'total' => $employee->leave_allocated ?? 0,
-            'pending' => $leaveRequests->where('status', 'pending')->count(),
-            'approved' => $leaveRequests->where('status', 'approved')->count(),
-            'rejected' => $leaveRequests->where('status', 'rejected')->count(),
-            'types' => $leaveTypes->count(),
-        ];
-
-        $assetStats = [
-            'total' => $counts['assets'] ?? $assetAssignments->count(),
-            'assigned' => $assetAssignments->where('status', 'assigned')->count(),
-            'returned' => $assetAssignments->where('status', 'returned')->count(),
-            'names' => $assets->pluck('name')->filter()->take(3)->implode(' · ') ?: 'No assets assigned',
-        ];
-
-        $nextMeetingModel = $teamMeetings->first();
-
-        $nextMeeting = [
-            'title' => $nextMeetingModel->title ?? $nextMeetingModel->meeting_title ?? 'No upcoming meeting',
-            'time' => isset($nextMeetingModel)
-                ? trim(($nextMeetingModel->meeting_date ?? '') . ' · ' . ($nextMeetingModel->meeting_time ?? ''))
-                : 'No meeting found',
-            'link' => $nextMeetingModel->meeting_link ?? null,
-        ];
-
-        $notices = $realNotices->map(function ($notice) {
-            $date = $notice->notice_publish_date ?? $notice->created_at ?? null;
-
-            try {
-                $date = $date ? \Carbon\Carbon::parse($date)->format('d M Y') : '';
-            } catch (\Throwable $e) {
-                $date = '';
-            }
-
-            return [
-                'title' => $notice->title ?? $notice->notice_title ?? 'Notice',
-                'category' => $notice->category ?? $notice->notice_type ?? 'General',
-                'date' => $date,
-                'priority' => $notice->priority ?? 'Normal',
-                'read' => $notice->pivot->is_read ?? false,
-            ];
-        });
-
-        $upcomingHoliday = $upcomingHoliday ?? [
-            'title' => 'No upcoming holiday',
-            'date' => 'Holiday data not found',
-            'remaining' => 'Please connect holidays relation/helper.',
-        ];
-
-        /*
-        |--------------------------------------------------------------------------
-        | Server attendance sessions for JS
-        |--------------------------------------------------------------------------
-        */
-
-        $jsTodaySessions = $todayAttendances->map(function ($attendance) {
-            $checkIn = $attendance->check_in_at ?? $attendance->check_in ?? $attendance->in_time ?? null;
-            $checkOut = $attendance->check_out_at ?? $attendance->check_out ?? $attendance->out_time ?? null;
-
-            $inCarbon = null;
-            $outCarbon = null;
-
-            try {
-                $inCarbon = $checkIn ? \Carbon\Carbon::parse($checkIn) : null;
-            } catch (\Throwable $e) {
-                $inCarbon = null;
-            }
-
-            try {
-                $outCarbon = $checkOut ? \Carbon\Carbon::parse($checkOut) : null;
-            } catch (\Throwable $e) {
-                $outCarbon = null;
-            }
-
-            return [
-                'date' => $inCarbon ? $inCarbon->format('Y-m-d') : now()->format('Y-m-d'),
-                'inTime' => $inCarbon ? $inCarbon->format('h:i:s A') : '—',
-                'outTime' => $outCarbon ? $outCarbon->format('h:i:s A') : '',
-                'inEpochMs' => $inCarbon ? $inCarbon->timestamp * 1000 : 0,
-                'outEpochMs' => $outCarbon ? $outCarbon->timestamp * 1000 : null,
-                'durationMs' => ($inCarbon && $outCarbon) ? $outCarbon->diffInMilliseconds($inCarbon) : 0,
-            ];
-        })->values();
-    @endphp
+    {{-- All dashboard variables are loaded from DashboardController@index. --}}
 
     <div class="wrap">
 
@@ -199,12 +40,21 @@
             </div>
 
             <div class="hero-actions">
-                <form method="POST" action="{{ $attendanceActionRoute }}" data-attendance-form>
-                    @csrf
-                    <button class="hero-btn" id="heroAttBtn" type="submit" data-db-attendance>
-                        {{ $attendanceActionLabel }}
-                    </button>
-                </form>
+                @if ($showAttendanceActions)
+                    <form method="POST" action="{{ $attendanceActionRoute }}" data-attendance-form>
+                        @csrf
+
+                        <button class="hero-btn" id="heroAttBtn" type="submit" data-db-attendance
+                            @disabled(!$canSubmitAttendance) title="{{ $attendanceDisabledReason }}">
+                            {{ $attendanceActionLabel }}
+                        </button>
+                    </form>
+                @else
+                    <span class="hero-btn ghost" style="cursor:not-allowed"
+                        title="{{ data_get($attendanceRules, 'messages.check_in') }}">
+                        On Leave Today
+                    </span>
+                @endif
 
                 <a class="hero-btn ghost" href="{{ url('/leave?new=1') }}">
                     Request leave
@@ -249,13 +99,22 @@
                     {{ data_get($attendanceRules, 'messages.check_in', 'Tap check in to start your day') }}
                 </div>
 
-                <form method="POST" action="{{ $attendanceActionRoute }}" style="margin-top:14px" data-attendance-form>
-                    @csrf
-                    <button class="btn {{ $hasOpenAttendance ? 'btn-ghost' : 'btn-primary' }} btn-block" id="cardAttBtn"
-                        type="submit" data-db-attendance>
-                        {{ $attendanceActionLabel }}
-                    </button>
-                </form>
+                @if ($showAttendanceActions)
+                    <form method="POST" action="{{ $attendanceActionRoute }}" style="margin-top:14px"
+                        data-attendance-form>
+                        @csrf
+
+                        <button class="btn {{ $hasOpenAttendance ? 'btn-ghost' : 'btn-primary' }} btn-block"
+                            id="cardAttBtn" type="submit" data-db-attendance @disabled(!$canSubmitAttendance)
+                            title="{{ $attendanceDisabledReason }}">
+                            {{ $attendanceActionLabel }}
+                        </button>
+                    </form>
+                @else
+                    <div style="margin-top:14px" class="btn btn-ghost btn-block">
+                        You are on leave today
+                    </div>
+                @endif
             </div>
 
             {{-- SESSION COUNT CARD --}}
@@ -283,7 +142,8 @@
                 </div>
 
                 <div style="font-size:12.5px;color:#94A3B8;margin-top:8px" id="attSessionSub">
-                    Check in {{ $todayCheckInCount }}/{{ $maxCheckIn }} · Check out {{ $todayCheckOutCount }}/{{ $maxCheckOut }}
+                    Check in {{ $todayCheckInCount }}/{{ $maxCheckIn }} · Check out
+                    {{ $todayCheckOutCount }}/{{ $maxCheckOut }}
                 </div>
             </div>
 
@@ -304,21 +164,23 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
                     <label style="font-size:12px;color:#64748B;font-weight:700">
                         From
-                        <input type="time" id="attStartTime" value="{{ $officeOpeningInput }}"
+                        <input type="time" readonly id="attStartTime" value="{{ $officeOpeningInput }}"
                             style="width:100%;margin-top:6px;border:1px solid #E2E8F0;border-radius:10px;padding:9px 10px">
                     </label>
 
                     <label style="font-size:12px;color:#64748B;font-weight:700">
                         To
-                        <input type="time" id="attEndTime" value="{{ $officeClosingInput }}"
+                        <input type="time" readonly id="attEndTime" value="{{ $officeClosingInput }}"
                             style="width:100%;margin-top:6px;border:1px solid #E2E8F0;border-radius:10px;padding:9px 10px">
                     </label>
                 </div>
 
                 <label style="font-size:12px;color:#64748B;font-weight:700;display:block;margin-top:10px">
                     Max check-in / check-out per day
-                    <input type="number" id="attMaxSessions" value="{{ $maxCheckIn }}" min="1" max="10"
-                        style="width:100%;margin-top:6px;border:1px solid #E2E8F0;border-radius:10px;padding:9px 10px">
+                    <input type="number" id="attMaxSessions" value="{{ $maxCheckIn }}" min="1"
+                        max="10"
+                        style="width:100%;margin-top:6px;border:1px solid #E2E8F0;border-radius:10px;padding:9px 10px"
+                        readonly>
                 </label>
 
                 <div style="font-size:12.5px;color:#94A3B8;margin-top:10px" id="attRuleStatus">
@@ -391,268 +253,7 @@
             </div>
         </div>
 
-        {{-- EMPLOYEE FULL DETAILS --}}
-        <div class="cards-grid auto-250" style="margin-top:18px">
 
-            {{-- EMPLOYEE PROFILE --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Employee Profile</span>
-                    <span class="badge xs">{{ ucfirst($employee->status ?? 'N/A') }}</span>
-                </div>
-
-                <div style="margin-top:14px">
-                    <div style="font-size:20px;font-weight:800;color:#1E293B">
-                        {{ $employee->name ?? 'N/A' }}
-                    </div>
-
-                    <div style="font-size:13px;color:#64748B;margin-top:4px">
-                        {{ $employee->employee_code ?? 'No employee code' }}
-                    </div>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px;line-height:1.7">
-                    Work Email:
-                    <strong style="color:#334155">{{ $employee->work_email ?? 'N/A' }}</strong><br>
-
-                    Phone:
-                    <strong style="color:#334155">{{ $employee->phone ?? 'N/A' }}</strong><br>
-
-                    Type:
-                    <strong style="color:#334155">{{ ucfirst($employee->employment_type ?? 'N/A') }}</strong>
-                </div>
-            </div>
-
-            {{-- COMPANY DETAILS --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Company Details</span>
-                    <span class="ico tint-blue">🏢</span>
-                </div>
-
-                <div style="margin-top:14px;font-size:20px;font-weight:800;color:#1E293B">
-                    {{ $company->name ?? 'N/A' }}
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px;line-height:1.7">
-                    Branch:
-                    <strong style="color:#334155">{{ $branch->name ?? 'N/A' }}</strong><br>
-
-                    Department:
-                    <strong style="color:#334155">{{ $department->dept_name ?? 'N/A' }}</strong><br>
-
-                    Post:
-                    <strong style="color:#334155">{{ $post->post_name ?? 'N/A' }}</strong>
-                </div>
-            </div>
-
-            {{-- OFFICE TIME --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Office Time</span>
-
-                    <span class="badge xs">
-                        {{ $isWithinOfficeTime ? 'Allowed Now' : 'Closed' }}
-                    </span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-                    <span style="font-size:22px;font-weight:800;color:#1E293B">
-                        {{ \Carbon\Carbon::parse($officeOpening)->format('h:i A') }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8">
-                        to
-                    </span>
-
-                    <span style="font-size:22px;font-weight:800;color:#1E293B">
-                        {{ \Carbon\Carbon::parse($officeClosing)->format('h:i A') }}
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px;line-height:1.7">
-                    Shift:
-                    <strong style="color:#334155">{{ $officeTime->shift ?? 'N/A' }}</strong><br>
-
-                    Type:
-                    <strong style="color:#334155">{{ $officeTime->shift_type ?? 'N/A' }}</strong><br>
-
-                    Category:
-                    <strong style="color:#334155">{{ $officeTime->category ?? 'N/A' }}</strong>
-                </div>
-            </div>
-
-            {{-- ATTENDANCE LIMIT --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Attendance Limit</span>
-                    <span class="ico tint-orange">⏱</span>
-                </div>
-
-                <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div>
-                        <div style="font-size:12px;color:#94A3B8;font-weight:700">
-                            Check In
-                        </div>
-
-                        <div style="font-size:24px;font-weight:800;color:#1E293B">
-                            {{ $todayCheckInCount }}/{{ $maxCheckIn }}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div style="font-size:12px;color:#94A3B8;font-weight:700">
-                            Check Out
-                        </div>
-
-                        <div style="font-size:24px;font-weight:800;color:#1E293B">
-                            {{ $todayCheckOutCount }}/{{ $maxCheckOut }}
-                        </div>
-                    </div>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px">
-                    {{ data_get($attendanceRules, 'messages.check_in') }}
-                </div>
-            </div>
-        </div>
-
-        {{-- MORE EMPLOYEE DATA --}}
-        <div class="cards-grid auto-250" style="margin-top:18px">
-
-            {{-- SALARY ACCOUNT --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Salary Account</span>
-                    <span class="ico tint-green">💳</span>
-                </div>
-
-                <div style="margin-top:14px;font-size:18px;font-weight:800;color:#1E293B">
-                    {{ $employeeAccount->bank_name ?? 'No bank added' }}
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px;line-height:1.7">
-                    Account Holder:
-                    <strong style="color:#334155">{{ $employeeAccount->account_holder ?? 'N/A' }}</strong><br>
-
-                    Account No:
-                    <strong style="color:#334155">{{ $employeeAccount->bank_account_no ?? 'N/A' }}</strong><br>
-
-                    Cycle:
-                    <strong style="color:#334155">{{ ucfirst($employeeAccount->salary_cycle ?? 'N/A') }}</strong>
-                </div>
-            </div>
-
-            {{-- PAYSLIPS --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Payslips</span>
-                    <span class="ico tint-orange">🧾</span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-                    <span style="font-size:28px;font-weight:800;color:#1E293B">
-                        {{ $counts['payslips'] ?? $payslips->count() }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8;font-weight:600">
-                        records
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px">
-                    Advance salaries: {{ $counts['advance_salaries'] ?? $advanceSalaries->count() }}
-                </div>
-            </div>
-
-            {{-- TADA --}}
-            <div class="card card-pad clickable" onclick="window.location.href='{{ url('/tada') }}'">
-                <div class="spread">
-                    <span class="lbl">TADA Requests</span>
-                    <span class="ico tint-green">🚕</span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-                    <span style="font-size:28px;font-weight:800;color:#1E293B">
-                        {{ $counts['tadas'] ?? $tadas->count() }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8;font-weight:600">
-                        requests
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px">
-                    Latest TADA records from your employee account.
-                </div>
-            </div>
-
-            {{-- AWARDS --}}
-            <div class="card card-pad">
-                <div class="spread">
-                    <span class="lbl">Awards</span>
-                    <span class="ico tint-violet">🏆</span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-                    <span style="font-size:28px;font-weight:800;color:#1E293B">
-                        {{ $counts['awards'] ?? $awards->count() }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8;font-weight:600">
-                        awards
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px">
-                    Recognition and achievement records.
-                </div>
-            </div>
-
-            {{-- MEETINGS --}}
-            <div class="card card-pad clickable" onclick="window.location.href='{{ url('/meetings') }}'">
-                <div class="spread">
-                    <span class="lbl">Team Meetings</span>
-                    <span class="ico tint-blue">🎥</span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-                    <span style="font-size:28px;font-weight:800;color:#1E293B">
-                        {{ $counts['team_meetings'] ?? $teamMeetings->count() }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8;font-weight:600">
-                        meetings
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                    Next: {{ $nextMeeting['title'] }}
-                </div>
-            </div>
-
-            {{-- NOTICES --}}
-            <div class="card card-pad clickable" onclick="window.location.href='{{ url('/notices') }}'">
-                <div class="spread">
-                    <span class="lbl">Notices</span>
-                    <span class="ico tint-orange">📢</span>
-                </div>
-
-                <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-                    <span style="font-size:28px;font-weight:800;color:#1E293B">
-                        {{ $counts['notices'] ?? $notices->count() }}
-                    </span>
-
-                    <span style="font-size:13px;color:#94A3B8;font-weight:600">
-                        notices
-                    </span>
-                </div>
-
-                <div style="font-size:12.5px;color:#94A3B8;margin-top:10px">
-                    Latest company notices assigned to you.
-                </div>
-            </div>
-        </div>
 
         {{-- ATTENDANCE LOGS --}}
         <div class="card" style="margin-top:16px">
@@ -673,8 +274,10 @@
             <div id="attLogsWrap" style="padding:0 18px 18px">
                 @forelse ($todayAttendances as $index => $attendance)
                     @php
-                        $checkIn = $attendance->check_in_at ?? $attendance->check_in ?? $attendance->in_time ?? null;
-                        $checkOut = $attendance->check_out_at ?? $attendance->check_out ?? $attendance->out_time ?? null;
+                        $checkIn =
+                            $attendance->check_in_at ?? ($attendance->check_in ?? ($attendance->in_time ?? null));
+                        $checkOut =
+                            $attendance->check_out_at ?? ($attendance->check_out ?? ($attendance->out_time ?? null));
 
                         try {
                             $checkInTime = $checkIn ? \Carbon\Carbon::parse($checkIn) : null;
@@ -691,14 +294,37 @@
                         $durationText = 'Running';
 
                         if ($checkInTime && $checkOutTime) {
-                            $minutes = $checkOutTime->diffInMinutes($checkInTime);
-                            $hours = floor($minutes / 60);
-                            $mins = $minutes % 60;
-                            $durationText = $hours . 'h ' . str_pad($mins, 2, '0', STR_PAD_LEFT) . 'm';
+                            $workedHour = $attendance->worked_hour ?? null;
+
+                            if ($workedHour !== null && is_numeric($workedHour)) {
+                                $totalMs = (int) round(((float) $workedHour) * 60 * 60 * 1000);
+                            } else {
+                                $totalMs = $checkOutTime->diffInMilliseconds($checkInTime);
+                            }
+
+                            $hours = floor($totalMs / 3600000);
+                            $totalMs = $totalMs % 3600000;
+
+                            $minutes = floor($totalMs / 60000);
+                            $totalMs = $totalMs % 60000;
+
+                            $seconds = floor($totalMs / 1000);
+                            $milliseconds = $totalMs % 1000;
+
+                            $durationText =
+                                $hours .
+                                'h ' .
+                                str_pad($minutes, 2, '0', STR_PAD_LEFT) .
+                                'm ' .
+                                str_pad($seconds, 2, '0', STR_PAD_LEFT) .
+                                's ' .
+                                str_pad($milliseconds, 3, '0', STR_PAD_LEFT) .
+                                'ms';
                         }
                     @endphp
 
-                    <div style="display:grid;grid-template-columns:72px 1fr 1fr 1fr auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #E2E8F0">
+                    <div
+                        style="display:grid;grid-template-columns:72px 1fr 1fr 1fr auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #E2E8F0">
                         <div>
                             <div style="font-size:12px;color:#94A3B8;font-weight:700">Session</div>
                             <div style="font-size:16px;font-weight:800;color:#1E293B">#{{ $index + 1 }}</div>
@@ -853,6 +479,17 @@
                 csrf: @json(csrf_token())
             };
 
+            const SERVER_RULES = {
+                showAttendanceActions: @json($showAttendanceActions),
+                canCheckIn: @json($canCheckIn),
+                canCheckOut: @json($canCheckOut),
+                checkInMessage: @json(data_get($attendanceRules, 'messages.check_in')),
+                checkOutMessage: @json(data_get($attendanceRules, 'messages.check_out')),
+                isFullDayLeave: @json(data_get($attendanceRules, 'leave.is_full_day_leave', false)),
+                isInsideShortLeave: @json(data_get($attendanceRules, 'leave.is_inside_short_leave', false)),
+                shortLeaveWindows: @json(data_get($attendanceRules, 'leave.short_leave_windows', []))
+            };
+
             const SETTINGS_KEY = "tc_attendance_rules";
 
             const DEFAULT_SETTINGS = {
@@ -892,21 +529,16 @@
             }
 
             function loadSettings() {
-                try {
-                    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
-
-                    return {
-                        start: saved && saved.start ? saved.start : DEFAULT_SETTINGS.start,
-                        end: saved && saved.end ? saved.end : DEFAULT_SETTINGS.end,
-                        max: saved && saved.max ? Number(saved.max) : DEFAULT_SETTINGS.max
-                    };
-                } catch (e) {
-                    return DEFAULT_SETTINGS;
-                }
+                return {
+                    start: DEFAULT_SETTINGS.start,
+                    end: DEFAULT_SETTINGS.end,
+                    max: DEFAULT_SETTINGS.max
+                };
             }
 
             function saveSettings(settings) {
-                localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                // Rules come from database/server. Do not persist manual browser overrides.
+                return settings;
             }
 
             function applySettingsToInputs() {
@@ -1089,13 +721,27 @@
 
             function applyAttendanceState(payload) {
                 const active = !!payload.has_open_attendance;
+                SERVER_RULES.canCheckIn = !active;
+                SERVER_RULES.canCheckOut = active;
+
+                if (payload.permissions) {
+                    SERVER_RULES.canCheckIn = !!payload.permissions.can_check_in;
+                    SERVER_RULES.canCheckOut = !!payload.permissions.can_check_out;
+                }
+
+                if (payload.messages) {
+                    SERVER_RULES.checkInMessage = payload.messages.check_in || SERVER_RULES.checkInMessage;
+                    SERVER_RULES.checkOutMessage = payload.messages.check_out || SERVER_RULES.checkOutMessage;
+                }
 
                 syncSessionsFromServer(payload.sessions || []);
+
                 setAttendanceButtons(
                     active,
                     payload.action_label || (active ? "Check Out" : "Check In"),
                     payload.action_url || (active ? ATTENDANCE_ENDPOINTS.checkOut : ATTENDANCE_ENDPOINTS.checkIn)
                 );
+
                 renderLiveAttendance();
 
                 if (payload.message) {
@@ -1105,6 +751,13 @@
 
             function submitAttendance(form) {
                 const button = form.querySelector("button");
+
+                const allowed = canPerformAttendanceAction();
+
+                if (!allowed.ok) {
+                    notify(allowed.message);
+                    return;
+                }
 
                 if (button) {
                     button.disabled = true;
@@ -1137,6 +790,13 @@
             function canPerformAttendanceAction() {
                 bootTC();
 
+                if (!SERVER_RULES.showAttendanceActions || SERVER_RULES.isFullDayLeave) {
+                    return {
+                        ok: false,
+                        message: SERVER_RULES.checkInMessage || "You are on approved leave today."
+                    };
+                }
+
                 const settings = readSettingsFromInputs();
                 const sessions = getTodaySessions();
                 const active = getActiveSession();
@@ -1145,11 +805,20 @@
                 if (!isWithinAllowedTime(settings)) {
                     return {
                         ok: false,
-                        message: "Attendance allowed only from " + settings.start + " to " + settings.end + "."
+                        message: active ?
+                            (SERVER_RULES.checkOutMessage || "Check out is only allowed during office time.") : (
+                                SERVER_RULES.checkInMessage || "Check in is only allowed during office time.")
                     };
                 }
 
                 if (active) {
+                    if (!SERVER_RULES.canCheckOut) {
+                        return {
+                            ok: false,
+                            message: SERVER_RULES.checkOutMessage || "Check out is not allowed right now."
+                        };
+                    }
+
                     if (completedCheckouts >= settings.max) {
                         return {
                             ok: false,
@@ -1160,6 +829,13 @@
                     return {
                         ok: true,
                         message: ""
+                    };
+                }
+
+                if (!SERVER_RULES.canCheckIn) {
+                    return {
+                        ok: false,
+                        message: SERVER_RULES.checkInMessage || "Check in is not allowed right now."
                     };
                 }
 
@@ -1215,33 +891,40 @@
 
                 const label = active ? "Check Out" : "Check In";
 
-                const status = active
-                    ? "Checked in"
-                    : sessions.length
-                        ? "Checked out"
-                        : "Not checked in";
+                const status = active ?
+                    "Checked in" :
+                    sessions.length ?
+                    "Checked out" :
+                    "Not checked in";
 
-                const summary = active
-                    ? "You checked in at " + active.inTime + ". Total today: " + totalText + "."
-                    : sessions.length
-                        ? "You are currently checked out. Total today: " + totalText + "."
-                        : "You haven't checked in yet — have a great day!";
+                const summary = active ?
+                    "You checked in at " + active.inTime + ". Total today: " + totalText + "." :
+                    sessions.length ?
+                    "You are currently checked out. Total today: " + totalText + "." :
+                    "You haven't checked in yet — have a great day!";
 
-                const sub = active
-                    ? "Current session started at " + active.inTime + " · Sessions today: " + sessions.length
-                    : sessions.length
-                        ? sessions.length + " sessions completed today"
-                        : "Tap check in to start your day";
+                const sub = active ?
+                    "Current session started at " + active.inTime + " · Sessions today: " + sessions.length :
+                    sessions.length ?
+                    sessions.length + " sessions completed today" :
+                    "Tap check in to start your day";
 
-                const sessionSub = active
-                    ? "One session is currently running"
-                    : sessions.length
-                        ? "Last session completed"
-                        : "No attendance log found today";
+                const sessionSub = active ?
+                    "One session is currently running" :
+                    sessions.length ?
+                    "Last session completed" :
+                    "No attendance log found today";
 
-                const ruleStatus = allowedNow
-                    ? "Allowed now · " + Math.max(0, settings.max - sessions.length) + " check-ins left · " + Math.max(0, settings.max - completedCheckouts) + " check-outs left"
-                    : "Not allowed now · Allowed from " + settings.start + " to " + settings.end;
+                let ruleStatus = allowedNow ?
+                    "Allowed now · " + Math.max(0, settings.max - sessions.length) + " check-ins left · " + Math.max(0,
+                        settings.max - completedCheckouts) + " check-outs left" :
+                    "Not allowed now · Allowed from " + settings.start + " to " + settings.end;
+
+                if (!SERVER_RULES.showAttendanceActions || SERVER_RULES.isFullDayLeave) {
+                    ruleStatus = SERVER_RULES.checkInMessage || "You are on approved leave today.";
+                } else if (SERVER_RULES.isInsideShortLeave) {
+                    ruleStatus = SERVER_RULES.checkInMessage || "You are inside approved short leave time.";
+                }
 
                 const attSummary = document.getElementById("attSummary");
                 const heroAttBtn = document.getElementById("heroAttBtn");
@@ -1265,8 +948,21 @@
                 if (attSessionSub) attSessionSub.textContent = sessionSub;
                 if (attRuleStatus) attRuleStatus.textContent = ruleStatus;
 
+                const actionAllowed = canPerformAttendanceAction().ok;
+
                 if (cardAttBtn) {
                     cardAttBtn.className = "btn " + (active ? "btn-ghost" : "btn-primary") + " btn-block";
+                    cardAttBtn.disabled = !actionAllowed;
+                    cardAttBtn.title = active ?
+                        (SERVER_RULES.checkOutMessage || "") :
+                        (SERVER_RULES.checkInMessage || "");
+                }
+
+                if (heroAttBtn) {
+                    heroAttBtn.disabled = !actionAllowed;
+                    heroAttBtn.title = active ?
+                        (SERVER_RULES.checkOutMessage || "") :
+                        (SERVER_RULES.checkInMessage || "");
                 }
 
                 if (topAtt) {
@@ -1298,9 +994,9 @@
                     const sessionNo = sessions.length - index;
                     const isRunning = !session.outEpochMs;
 
-                    const duration = isRunning
-                        ? msToText(Date.now() - Number(session.inEpochMs || Date.now()))
-                        : msToText(Number(session.durationMs || 0));
+                    const duration = isRunning ?
+                        msToText(Date.now() - Number(session.inEpochMs || Date.now())) :
+                        msToText(Number(session.durationMs || 0));
 
                     return `
                         <div style="display:grid;grid-template-columns:72px 1fr 1fr 1fr auto;gap:12px;align-items:center;padding:14px 0;border-top:1px solid #E2E8F0">

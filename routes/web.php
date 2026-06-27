@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Employee\AssetController;
 use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\HolidayController;
@@ -44,7 +45,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/status', [AttendanceController::class, 'status'])->name('attendance.status');

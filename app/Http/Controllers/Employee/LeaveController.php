@@ -7,12 +7,14 @@ use App\Http\Controllers\Employee\Concerns\WorksWithEmployee;
 use App\Http\Requests\Employee\StoreLeaveRequest;
 use App\Http\Requests\Employee\StoreTimeLeaveRequest;
 use App\Models\LeaveRequestMaster;
+use App\Models\LeaveType;
 use App\Models\TimeLeave;
 use App\Support\SharedTableId;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+
 
 class LeaveController extends Controller
 {
@@ -21,10 +23,13 @@ class LeaveController extends Controller
     public function index(): View
     {
         $employee = $this->employee();
+        $leaveTypes = LeaveType::where('branch_id', $employee->branch_id)->get();
+       
 
         return view('leave.index', [
             'employee' => $employee,
-            'leaveTypes' => $employee->employeeLeaveTypes()->with('leaveType')->get(),
+            'leavetype' => $leaveTypes,
+            'employeeleaves' => $employee->employeeLeaveTypes()->with('leaveType')->get(),
             'leaveRequests' => $employee->leaveRequests()
                 ->with('leaveType')
                 ->latest('leave_requested_date')

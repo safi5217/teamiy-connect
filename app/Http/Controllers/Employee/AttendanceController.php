@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
 {
@@ -40,6 +41,8 @@ class AttendanceController extends Controller
     public function checkIn(Request $request): RedirectResponse|JsonResponse
     {
         $employee = $this->employee();
+        $maxCheckInPerDay = 3;
+
 
         $openAttendance = Attendance::query()
             ->where('user_id', $employee->id)
@@ -54,6 +57,22 @@ class AttendanceController extends Controller
             }
 
             return back()->with('status', 'You are already checked in for today.');
+        }
+
+        $todayCheckInCount = Attendance::query()
+            ->where('user_id', $employee->id)
+            ->whereDate('attendance_date', today())
+            ->whereNotNull('check_in_at')
+            ->count();
+
+        if ($todayCheckInCount >= $maxCheckInPerDay) {
+            $message = 'Maximum 3 check-ins are allowed for today.';
+
+            if ($request->expectsJson()) {
+                return response()->json($this->attendanceState($message), 422);
+            }
+
+            return back()->with('status', $message);
         }
 
         DB::transaction(function () use ($employee): void {
@@ -71,6 +90,9 @@ class AttendanceController extends Controller
             ]);
         });
 
+
+
+
         if ($request->expectsJson()) {
             return response()->json($this->attendanceState('Checked in successfully.'));
         }
@@ -80,7 +102,9 @@ class AttendanceController extends Controller
 
     public function checkOut(Request $request): RedirectResponse|JsonResponse
     {
-        $employee = $this->employee();
+        Log::info('request all', $request->all());
+
+        $employee = auth()->user();
 
         $attendance = Attendance::query()
             ->where('user_id', $employee->id)
@@ -98,12 +122,26 @@ class AttendanceController extends Controller
             return back()->with('status', 'No active check-in found for today.');
         }
 
-        $checkIn = Carbon::parse($attendance->attendance_date->toDateString().' '.$attendance->check_in_at);
-        $workedHours = round($checkIn->diffInMinutes(now()) / 60, 2);
+        $attendanceDate = $attendance->attendance_date instanceof Carbon
+            ? $attendance->attendance_date->toDateString()
+            : Carbon::parse($attendance->attendance_date)->toDateString();
+
+        $checkIn = Carbon::parse($attendanceDate . ' ' . $attendance->check_in_at);
+        $checkOut = now();
+
+        /*
+    |--------------------------------------------------------------------------
+    | Save worked time as total seconds
+    |--------------------------------------------------------------------------
+    | Example:
+    | 07:11 means 7 minutes 11 seconds
+    | Database mein save hoga: 431
+    */
+        $workedSeconds = $checkIn->diffInSeconds($checkOut);
 
         $attendance->update([
-            'check_out_at' => now()->format('H:i:s'),
-            'worked_hour' => $workedHours,
+            'check_out_at' => $checkOut->format('H:i:s'),
+            'worked_hour' => $workedSeconds,
             'updated_by' => $employee->id,
         ]);
 
@@ -136,18 +174,18 @@ class AttendanceController extends Controller
                 ? route('attendance.check-out')
                 : route('attendance.check-in'),
             'action_label' => $hasOpenAttendance ? 'Check Out' : 'Check In',
-            'sessions' => $attendances->map(fn (Attendance $attendance): array => $this->attendanceSession($attendance))->values(),
+            'sessions' => $attendances->map(fn(Attendance $attendance): array => $this->attendanceSession($attendance))->values(),
         ];
     }
 
     private function attendanceSession(Attendance $attendance): array
     {
         $checkIn = $attendance->check_in_at
-            ? Carbon::parse($attendance->attendance_date->toDateString().' '.$attendance->check_in_at)
+            ? Carbon::parse($attendance->attendance_date->toDateString() . ' ' . $attendance->check_in_at)
             : null;
 
         $checkOut = $attendance->check_out_at
-            ? Carbon::parse($attendance->attendance_date->toDateString().' '.$attendance->check_out_at)
+            ? Carbon::parse($attendance->attendance_date->toDateString() . ' ' . $attendance->check_out_at)
             : null;
 
         return [
@@ -156,7 +194,9 @@ class AttendanceController extends Controller
             'outTime' => $checkOut?->format('h:i:s A') ?? '',
             'inEpochMs' => $checkIn ? $checkIn->timestamp * 1000 : 0,
             'outEpochMs' => $checkOut ? $checkOut->timestamp * 1000 : null,
-            'durationMs' => ($checkIn && $checkOut) ? $checkOut->diffInMilliseconds($checkIn) : 0,
+            'durationMs' => ($checkIn && $checkOut)
+                ? abs($checkOut->diffInMilliseconds($checkIn, false))
+                : 0,
         ];
     }
 }
