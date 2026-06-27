@@ -19,14 +19,16 @@ class ResignationController extends Controller
 
     public function index(): View
     {
-        $employee = $this->employee();
+        $employee = $this->employee()->load('supervisor');
+        $resignations = Resignation::query()
+            ->where('employee_id', $employee->id)
+            ->latest('resignation_date')
+            ->get();
 
         return view('resignation.index', [
             'employee' => $employee,
-            'resignations' => Resignation::query()
-                ->where('employee_id', $employee->id)
-                ->latest('resignation_date')
-                ->get(),
+            'latestResignation' => $resignations->first(),
+            'resignations' => $resignations,
             'transfers' => Transfer::query()
                 ->where('employee_id', $employee->id)
                 ->latest('transfer_date')
@@ -44,14 +46,16 @@ class ResignationController extends Controller
     {
         $employee = $this->employee();
         $validated = $request->validated();
+        $documentPath = $request->file('document')?->store('resignation-documents', 'public');
 
-        DB::transaction(function () use ($employee, $validated): void {
+        DB::transaction(function () use ($documentPath, $employee, $validated): void {
             Resignation::query()->create([
                 'id' => SharedTableId::next(Resignation::class),
                 'employee_id' => $employee->id,
                 'resignation_date' => $validated['resignation_date'],
                 'last_working_day' => $validated['last_working_day'],
                 'reason' => $validated['reason'],
+                'document' => $documentPath,
                 'status' => 'pending',
                 'created_by' => $employee->id,
                 'branch_id' => $employee->branch_id,

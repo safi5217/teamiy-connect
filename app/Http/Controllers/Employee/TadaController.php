@@ -18,9 +18,24 @@ class TadaController extends Controller
     public function index(): View
     {
         $employee = $this->employee();
+        $allTadas = Tada::query()
+            ->where('employee_id', $employee->id)
+            ->get();
 
         return view('tada.index', [
             'employee' => $employee,
+            'tadaStats' => [
+                'total_claimed' => $allTadas->sum('total_expense'),
+                'approved' => $allTadas
+                    ->filter(fn (Tada $tada): bool => in_array(strtolower((string) $tada->status), ['approved', 'accepted'], true))
+                    ->sum('total_expense'),
+                'pending' => $allTadas
+                    ->filter(fn (Tada $tada): bool => strtolower((string) $tada->status) === 'pending')
+                    ->sum('total_expense'),
+                'paid' => $allTadas
+                    ->where('is_settled', true)
+                    ->sum('total_expense'),
+            ],
             'tadas' => Tada::query()
                 ->where('employee_id', $employee->id)
                 ->latest()
