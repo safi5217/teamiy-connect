@@ -75,3 +75,6 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+
+
+
