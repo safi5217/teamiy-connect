@@ -14,22 +14,79 @@ use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
-
+use App\Enums\LeaveGenderEnum;
+use Illuminate\Support\Facades\Log;
+use App\Services\Employee\EmployeeLeaveService;
+use Exception;
 
 class LeaveController extends Controller
 {
     use WorksWithEmployee;
 
+    public function __construct(
+        protected EmployeeLeaveService $employeeLeaveService
+    ) {}
     public function index(): View
     {
         $employee = $this->employee();
-        $leaveTypes = LeaveType::where('branch_id', $employee->branch_id)->get();
-       
+        $gender = $employee->gender;
+        $leaveTypes = LeaveType::where('branch_id', $employee->branch_id)
+            ->where('is_active', 1)
+            ->where(function ($query) use ($gender) {
+                $query->where('gender', $gender)
+                    ->orWhere('gender', LeaveGenderEnum::All->value);
+            })
+
+            ->orderBy('id')
+            ->get()
+            ->map(function ($leaveType) use ($employee) {
+
+                $usedLeaves = $employee->leaveRequests()
+                    ->where('leave_type_id', $leaveType->id)
+                    ->where('status', 'approved')
+                    ->sum('no_of_days');
+
+                $leaveType->used_leaves = $usedLeaves;
+                $leaveType->left_leaves = $leaveType->leave_allocated - $usedLeaves;
+
+                $leaveType->used_percentage = $leaveType->leave_allocated > 0
+                    ? ($usedLeaves / $leaveType->leave_allocated) * 100
+                    : 0;
+
+                return $leaveType;
+            });
+
+        $leaveTypeIds = $leaveTypes->pluck('id');
+
+        $fullLeaves = LeaveRequestMaster::where('requested_by', $employee->id)
+            ->whereIn('leave_type_id', $leaveTypeIds)
+            ->with('leaveType')
+            ->get()
+            ->map(function ($leave) {
+                $leave->record_type = 'full';
+                $leave->sort_date = $leave->leave_requested_date;
+                return $leave;
+            });
+
+        $shortLeaves = $employee->timeLeaves()
+            ->get()
+            ->map(function ($leave) {
+                $leave->record_type = 'short';
+                $leave->sort_date = $leave->issue_date;
+                return $leave;
+            });
+
+        $leavehistory = $fullLeaves
+            ->concat($shortLeaves)
+            ->sortByDesc('sort_date')
+            ->values();
+
+
 
         return view('leave.index', [
             'employee' => $employee,
             'leavetype' => $leaveTypes,
-            'employeeleaves' => $employee->employeeLeaveTypes()->with('leaveType')->get(),
+            'leavehistory' => $leavehistory,
             'leaveRequests' => $employee->leaveRequests()
                 ->with('leaveType')
                 ->latest('leave_requested_date')
@@ -40,56 +97,33 @@ class LeaveController extends Controller
                 ->get(),
         ]);
     }
+    
 
     public function store(StoreLeaveRequest $request): RedirectResponse
     {
-        $employee = $this->employee();
-        $validated = $request->validated();
-        $from = Carbon::parse($validated['leave_from'])->startOfDay();
-        $to = Carbon::parse($validated['leave_to'])->startOfDay();
+        try {
+            $this->employeeLeaveService->storeFullLeave(
+                $request->validated(),
+                $this->employee()
+            );
 
-        DB::transaction(function () use ($employee, $from, $to, $validated): void {
-            LeaveRequestMaster::query()->create([
-                'id' => SharedTableId::next(LeaveRequestMaster::class),
-                'title' => $validated['title'] ?? 'Leave request',
-                'no_of_days' => $from->diffInDays($to) + 1,
-                'leave_type_id' => $validated['leave_type_id'] ?? null,
-                'leave_requested_date' => now(),
-                'leave_from' => $from,
-                'leave_to' => $to,
-                'status' => 'pending',
-                'reasons' => $validated['reasons'],
-                'company_id' => $employee->company_id,
-                'requested_by' => $employee->id,
-                'early_exit' => false,
-                'branch_id' => $employee->branch_id,
-                'department_id' => $employee->department_id,
-            ]);
-        });
-
-        return back()->with('status', 'Leave request submitted.');
+            return back()->with('status', 'Leave request submitted.');
+        } catch (Exception $e) {
+            return back()->withErrors($e->getMessage())->withInput();
+        }
     }
 
     public function storeTimeLeave(StoreTimeLeaveRequest $request): RedirectResponse
     {
-        $employee = $this->employee();
-        $validated = $request->validated();
+        try {
+            $this->employeeLeaveService->storeShortLeave(
+                $request->validated(),
+                $this->employee()
+            );
 
-        DB::transaction(function () use ($employee, $validated): void {
-            TimeLeave::query()->create([
-                'id' => SharedTableId::next(TimeLeave::class),
-                'issue_date' => $validated['issue_date'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'status' => 'pending',
-                'reasons' => $validated['reasons'],
-                'requested_by' => $employee->id,
-                'branch_id' => $employee->branch_id,
-                'department_id' => $employee->department_id,
-                'company_id' => $employee->company_id,
-            ]);
-        });
-
-        return back()->with('status', 'Time leave request submitted.');
+            return back()->with('status', 'Time leave request submitted.');
+        } catch (Exception $e) {
+            return back()->withErrors($e->getMessage())->withInput();
+        }
     }
 }

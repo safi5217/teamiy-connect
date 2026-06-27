@@ -129,14 +129,7 @@ class AttendanceController extends Controller
         $checkIn = Carbon::parse($attendanceDate . ' ' . $attendance->check_in_at);
         $checkOut = now();
 
-        /*
-    |--------------------------------------------------------------------------
-    | Save worked time as total seconds
-    |--------------------------------------------------------------------------
-    | Example:
-    | 07:11 means 7 minutes 11 seconds
-    | Database mein save hoga: 431
-    */
+   
         $workedSeconds = $checkIn->diffInSeconds($checkOut);
 
         $attendance->update([

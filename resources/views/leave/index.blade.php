@@ -225,48 +225,28 @@
 
         {{-- BALANCE CARDS --}}
         <div class="cards-grid auto-160" style="margin-bottom:20px">
-            @foreach ( $leavetype as $leavet)
+            @foreach ($leavetype as $leavet)
                 <div class="card" style="padding:16px">
-                <div style="font-size:12.5px;color:#64748B;font-weight:700">{{ $leavet->name }}</div>
+                    <div style="font-size:12.5px;color:#64748B;font-weight:700">
+                        {{ $leavet->name }}
+                    </div>
 
-                <div style="display:flex;align-items:baseline;gap:5px;margin-top:6px">
-                    <span style="font-size:24px;font-weight:800" class="tc-num">{{ $leavet->leave_allocated }}</span>
-                    <span style="font-size:12px;color:#94A3B8">/ 18 left</span>
-                </div>
+                    <div style="display:flex;align-items:baseline;gap:5px;margin-top:6px">
+                        <span style="font-size:24px;font-weight:800" class="tc-num">
+                            {{ $leavet->used_leaves }}
+                        </span>
 
-                <div class="progress" style="margin-top:8px">
-                    <div class="progress-bar bar-blue" style="width:67%"></div>
+                        <span style="font-size:12px;color:#94A3B8">
+                            / {{ $leavet->left_leaves }} left
+                        </span>
+                    </div>
+
+                    <div class="progress" style="margin-top:8px">
+                        <div class="progress-bar bar-blue" style="width:{{ min($leavet->used_percentage, 100) }}%">
+                        </div>
+                    </div>
                 </div>
-            </div>
             @endforeach
-
-            
-
-            <div class="card" style="padding:16px">
-                <div style="font-size:12.5px;color:#64748B;font-weight:700">Sick</div>
-
-                <div style="display:flex;align-items:baseline;gap:5px;margin-top:6px">
-                    <span style="font-size:24px;font-weight:800" class="tc-num">6</span>
-                    <span style="font-size:12px;color:#94A3B8">/ 10 left</span>
-                </div>
-
-                <div class="progress" style="margin-top:8px">
-                    <div class="progress-bar bar-green" style="width:60%"></div>
-                </div>
-            </div>
-
-            <div class="card" style="padding:16px">
-                <div style="font-size:12.5px;color:#64748B;font-weight:700">Casual</div>
-
-                <div style="display:flex;align-items:baseline;gap:5px;margin-top:6px">
-                    <span style="font-size:24px;font-weight:800" class="tc-num">4</span>
-                    <span style="font-size:12px;color:#94A3B8">/ 8 left</span>
-                </div>
-
-                <div class="progress" style="margin-top:8px">
-                    <div class="progress-bar bar-amber" style="width:50%"></div>
-                </div>
-            </div>
 
             <div class="card" style="padding:16px">
                 <div style="font-size:12.5px;color:#64748B;font-weight:700">Pending</div>
@@ -282,6 +262,19 @@
             </div>
         </div>
 
+        @if (session('status'))
+            <div class="card"
+                style="padding:14px 16px;margin-bottom:16px;color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="card"
+                style="padding:14px 16px;margin-bottom:16px;color:#B91C1C;background:#FEF2F2;border:1px solid #FECACA">
+                {{ $errors->first() }}
+            </div>
+        @endif
         {{-- LEAVE HISTORY --}}
         <div class="card">
             <div class="spread flex-wrap" style="padding:16px 18px">
@@ -318,53 +311,55 @@
                     </thead>
 
                     <tbody id="leaveTableBody">
-                        <tr data-status="Pending">
-                            <td>
-                                <div style="font-size:13.5px;font-weight:700;color:#1E293B">Annual Leave</div>
-                                <div style="font-size:11.5px;color:#94A3B8">Full Day</div>
-                            </td>
-                            <td class="tc-num">24 Jun 2026</td>
-                            <td class="tc-num" style="font-weight:600">1 day</td>
-                            <td style="color:#64748B;max-width:200px">Personal work at home.</td>
-                            <td><span class="badge pending">Pending</span></td>
-                            <td style="color:#94A3B8;max-width:170px;font-size:12.5px">—</td>
-                        </tr>
+                        @forelse ($leavehistory as $leave)
+                            <tr data-status="{{ ucfirst($leave->status) }}">
+                                <td>
+                                    <div style="font-size:13.5px;font-weight:700;color:#1E293B">
+                                        {{ $leave->record_type === 'short' ? 'Short Leave' : $leave->leaveType->name ?? 'Leave Type' }}
+                                    </div>
+                                    <div style="font-size:11.5px;color:#94A3B8">
+                                        {{ $leave->record_type === 'short' ? 'Short Leave' : $leave->title ?? 'Full Day' }}
+                                    </div>
+                                </td>
 
-                        <tr data-status="Approved">
-                            <td>
-                                <div style="font-size:13.5px;font-weight:700;color:#1E293B">Sick Leave</div>
-                                <div style="font-size:11.5px;color:#94A3B8">Half Day</div>
-                            </td>
-                            <td class="tc-num">20 Jun 2026</td>
-                            <td class="tc-num" style="font-weight:600">½ day · First Half</td>
-                            <td style="color:#64748B;max-width:200px">Doctor appointment.</td>
-                            <td><span class="badge approved">Approved</span></td>
-                            <td style="color:#94A3B8;max-width:170px;font-size:12.5px">Approved by HR.</td>
-                        </tr>
+                                <td class="tc-num">
+                                    @if ($leave->record_type === 'short')
+                                        {{ optional($leave->issue_date)->format('d M Y') }}
+                                    @else
+                                        {{ optional($leave->leave_from)->format('d M Y') }} -
+                                        {{ optional($leave->leave_to)->format('d M Y') }}
+                                    @endif
+                                </td>
 
-                        <tr data-status="Rejected">
-                            <td>
-                                <div style="font-size:13.5px;font-weight:700;color:#1E293B">Short Leave</div>
-                                <div style="font-size:11.5px;color:#94A3B8">Short Leave</div>
-                            </td>
-                            <td class="tc-num">18 Jun 2026</td>
-                            <td class="tc-num" style="font-weight:600">02:00 PM–04:00 PM</td>
-                            <td style="color:#64748B;max-width:200px">Bank visit.</td>
-                            <td><span class="badge rejected">Rejected</span></td>
-                            <td style="color:#94A3B8;max-width:170px;font-size:12.5px">Work priority.</td>
-                        </tr>
+                                <td class="tc-num" style="font-weight:600">
+                                    @if ($leave->record_type === 'short')
+                                        {{ $leave->start_time }} - {{ $leave->end_time }}
+                                    @else
+                                        {{ $leave->no_of_days }} {{ $leave->no_of_days > 1 ? 'days' : 'day' }}
+                                    @endif
+                                </td>
 
-                        <tr data-status="Approved">
-                            <td>
-                                <div style="font-size:13.5px;font-weight:700;color:#1E293B">Casual Leave</div>
-                                <div style="font-size:11.5px;color:#94A3B8">Multi Day</div>
-                            </td>
-                            <td class="tc-num">10 Jun – 12 Jun</td>
-                            <td class="tc-num" style="font-weight:600">3 days</td>
-                            <td style="color:#64748B;max-width:200px">Family function.</td>
-                            <td><span class="badge approved">Approved</span></td>
-                            <td style="color:#94A3B8;max-width:170px;font-size:12.5px">Enjoy your leave.</td>
-                        </tr>
+                                <td style="color:#64748B;max-width:200px">
+                                    {{ $leave->reasons }}
+                                </td>
+
+                                <td>
+                                    <span class="badge {{ strtolower($leave->status) }}">
+                                        {{ ucfirst($leave->status) }}
+                                    </span>
+                                </td>
+
+                                <td style="color:#94A3B8;max-width:170px;font-size:12.5px">
+                                    {{ $leave->admin_remark ?? '—' }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:#94A3B8;padding:20px">
+                                    No leave history found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -401,7 +396,7 @@
                     </div>
 
                     {{-- FULL DAY FORM --}}
-                    <form id="fullLeavePanel" action="#" method="POST" data-leave-panel="full">
+                    <form id="fullLeavePanel" action="{{ route('leave.store') }}" method="POST" data-leave-panel="full">
                         @csrf
 
                         <input type="hidden" name="mode" value="full_day">
@@ -409,10 +404,10 @@
                         <div class="grid-2">
                             <div>
                                 <label class="label">Leave type</label>
-                                <select class="select" name="leave_type">
-                                    <option value="Annual Leave">Annual Leave</option>
-                                    <option value="Sick Leave">Sick Leave</option>
-                                    <option value="Casual Leave">Casual Leave</option>
+                                <select class="select" name="leave_type_id">
+                                    @foreach ($leavetype as $leavet)
+                                        <option value="{{ $leavet->id }}">{{ $leavet->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
@@ -428,12 +423,12 @@
 
                             <div>
                                 <label class="label">Start date</label>
-                                <input type="date" class="input" name="start_date" value="2026-06-24">
+                                <input type="date" class="input" name="leave_from" value="2026-06-24">
                             </div>
 
                             <div>
                                 <label class="label">End date</label>
-                                <input type="date" class="input" name="end_date" value="2026-06-24">
+                                <input type="date" class="input" name="leave_to" value="2026-06-24">
                             </div>
                         </div>
 
@@ -441,7 +436,7 @@
                             Reason
                         </label>
 
-                        <textarea class="textarea" name="reason" placeholder="Briefly describe your reason…" rows="3"></textarea>
+                        <textarea class="textarea" name="reasons" placeholder="Briefly describe your reason…" rows="3"></textarea>
 
                         <div class="dashed">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -465,8 +460,8 @@
                     </form>
 
                     {{-- SHORT LEAVE FORM --}}
-                    <form id="shortLeavePanel" action="#" method="POST" data-leave-panel="short"
-                        style="display:none">
+                    <form id="shortLeavePanel" action="{{ route('leave.time-leave.store') }}" method="POST"
+                        data-leave-panel="short" style="display:none">
                         @csrf
 
                         <input type="hidden" name="mode" value="short_leave">
@@ -481,17 +476,17 @@
 
                             <div>
                                 <label class="label">Date</label>
-                                <input type="date" class="input" name="date" value="2026-06-24">
+                                <input type="date" class="input" name="issue_date" value="2026-06-24">
                             </div>
 
                             <div>
                                 <label class="label">From time</label>
-                                <input type="time" class="input" name="from_time" value="14:00">
+                                <input type="time" class="input" name="start_time" value="14:00">
                             </div>
 
                             <div>
                                 <label class="label">To time</label>
-                                <input type="time" class="input" name="to_time" value="16:00">
+                                <input type="time" class="input" name="end_time" value="16:00">
                             </div>
                         </div>
 
@@ -499,7 +494,7 @@
                             Reason
                         </label>
 
-                        <textarea class="textarea" name="reason" placeholder="Briefly describe your reason…" rows="3"></textarea>
+                        <textarea class="textarea" name="reasons" placeholder="Briefly describe your reason…" rows="3"></textarea>
 
                         <div class="dashed">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
