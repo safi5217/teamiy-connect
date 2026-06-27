@@ -9,7 +9,6 @@
 
     <style>
         .resign-page {
-            max-width: 760px;
             margin: 0 auto;
             display: flex;
             flex-direction: column;
