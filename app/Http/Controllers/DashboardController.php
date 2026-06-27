@@ -12,6 +12,7 @@ class DashboardController extends Controller
     {
         $employeeId = auth()->id();
 
+
         $employee = User::query()
             ->with([
                 'company',
@@ -31,6 +32,17 @@ class DashboardController extends Controller
             ->findOrFail($employeeId);
 
         $todayAttendances = collect($employee->todayAttendances ?? []);
+        $shortLeaveWindows = $employee->timeLeaves()
+            ->whereDate('issue_date', today())
+            ->whereIn('status', ['pending', 'approved'])
+            ->get()
+            ->map(fn($leave) => [
+                'start_time' => \Carbon\Carbon::parse($leave->start_time)->format('H:i'),
+                'end_time' => \Carbon\Carbon::parse($leave->end_time)->format('H:i'),
+                'status' => $leave->status,
+            ])
+            ->values()
+            ->toArray();
 
 
         $fullDetails = [
@@ -51,12 +63,14 @@ class DashboardController extends Controller
 
             'attendance_details' => [
                 'today' => $todayAttendances,
+                'leave' => [
+                    'short_leave_windows' => $shortLeaveWindows,
+                    'is_inside_short_leave' => false,
+                ],
             ],
         ];
 
-        $attendanceRules = function_exists('attendance_rules')
-            ? attendance_rules($employee->id, $employee, $fullDetails)
-            : [];
+        $attendanceRules = attendance_rules($employee->id, $employee, $fullDetails);
 
 
         $userName = $employee->name ?? 'Employee';

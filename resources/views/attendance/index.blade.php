@@ -46,7 +46,7 @@
 
         <div class="cards-grid auto-250" style="margin-top:18px">
             <div class="card card-pad stat"><div class="lbl">Today logs</div><div class="val tc-num">{{ $today->count() }}</div></div>
-            <div class="card card-pad stat"><div class="lbl">Worked hours</div><div class="val tc-num">{{ number_format((float) $workedHours, 2) }}</div></div>
+            <div class="card card-pad stat"><div class="lbl">Worked hours(in minutes)</div><div class="val tc-num">{{ number_format((float) $workedHours, 2) }}</div></div>
             <div class="card card-pad stat"><div class="lbl">Overtime</div><div class="val tc-num">{{ number_format((float) $overtime, 2) }}</div></div>
         </div>
 

@@ -196,7 +196,7 @@
                 });
             @endphp
 
-            
+
             {{-- LEAVE CARD --}}
             <div class="card card-pad clickable" onclick="window.location.href='{{ url('/leave') }}'">
                 <div class="spread">
@@ -232,7 +232,7 @@
                     <div class="spread">
                         <span class="lbl">Short leave</span>
 
-                        
+
                     </div>
                     <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
 
@@ -516,6 +516,80 @@
                 isInsideShortLeave: @json(data_get($attendanceRules, 'leave.is_inside_short_leave', false)),
                 shortLeaveWindows: @json(data_get($attendanceRules, 'leave.short_leave_windows', []))
             };
+            let autoShortLeaveCheckoutDone = false;
+
+            function shortLeaveStartTimestamp(item) {
+                const today = new Date();
+                const parts = String(item.start_time || "00:00:00").split(":");
+
+                today.setHours(Number(parts[0] || 0));
+                today.setMinutes(Number(parts[1] || 0));
+                today.setSeconds(Number(parts[2] || 0));
+                today.setMilliseconds(0);
+
+                return today.getTime();
+            }
+
+            function triggerAutoCheckoutForShortLeave() {
+                const active = getActiveSession();
+
+                if (!active || autoShortLeaveCheckoutDone) {
+                    return;
+                }
+
+                autoShortLeaveCheckoutDone = true;
+
+                notify("Short leave started. Auto check-out is being submitted.");
+
+                fetch(ATTENDANCE_ENDPOINTS.checkOut, {
+                        method: "POST",
+                        headers: {
+                            "Accept": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            "X-CSRF-TOKEN": ATTENDANCE_ENDPOINTS.csrf
+                        }
+                    })
+                    .then(async function(response) {
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            throw new Error(payload.message || "Auto check-out failed.");
+                        }
+
+                        return payload;
+                    })
+                    .then(function(payload) {
+                        applyAttendanceState(payload);
+                    })
+                    .catch(function(error) {
+                        notify(error.message || "Auto check-out failed.");
+                        autoShortLeaveCheckoutDone = false;
+                    });
+            }
+
+            function scheduleShortLeaveAutoCheckout() {
+                const windows = Array.isArray(SERVER_RULES.shortLeaveWindows) ?
+                    SERVER_RULES.shortLeaveWindows : [];
+
+                if (!windows.length) {
+                    return;
+                }
+
+                windows.forEach(function(item) {
+                    const startMs = shortLeaveStartTimestamp(item);
+                    const delay = startMs - Date.now();
+
+                    if (delay <= 0) {
+                        triggerAutoCheckoutForShortLeave();
+                        return;
+                    }
+
+                    setTimeout(function() {
+                        triggerAutoCheckoutForShortLeave();
+                    }, delay);
+                });
+            }
+            console.log(SERVER_RULES.shortLeaveWindows);
 
             const SETTINGS_KEY = "tc_attendance_rules";
 
@@ -830,6 +904,20 @@
                     };
                 }
 
+                function isNowInsideShortLeaveWindow() {
+                    const windows = Array.isArray(SERVER_RULES.shortLeaveWindows) ?
+                        SERVER_RULES.shortLeaveWindows : [];
+
+                    const now = nowMinutes();
+
+                    return windows.some(function(item) {
+                        const start = timeToMinutes(item.start_time || item.start || "00:00");
+                        const end = timeToMinutes(item.end_time || item.end || "23:59");
+
+                        return now >= start && now <= end;
+                    });
+                }
+
                 const settings = readSettingsFromInputs();
                 const sessions = getTodaySessions();
                 const active = getActiveSession();
@@ -865,7 +953,7 @@
                     };
                 }
 
-                if (!SERVER_RULES.canCheckIn) {
+                if (!SERVER_RULES.canCheckIn && isNowInsideShortLeaveWindow()) {
                     return {
                         ok: false,
                         message: SERVER_RULES.checkInMessage || "Check in is not allowed right now."
@@ -1070,6 +1158,8 @@
                 setInterval(function() {
                     renderLiveAttendance();
                 }, 1000);
+
+                scheduleShortLeaveAutoCheckout();
             }
 
             document.addEventListener("DOMContentLoaded", function() {

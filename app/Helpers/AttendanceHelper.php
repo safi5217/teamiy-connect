@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Models\User;
@@ -16,9 +17,7 @@ if (! function_exists('attendance_find_record')) {
             return null;
         }
 
-        return DB::table($table)
-            ->where($column, $id)
-            ->first();
+        return DB::table($table)->where($column, $id)->first();
     }
 }
 
@@ -84,8 +83,7 @@ if (! function_exists('attendance_today_count')) {
             return 0;
         }
 
-        $query = DB::table('attendances')
-            ->where($userColumn, $userId);
+        $query = DB::table('attendances')->where($userColumn, $userId);
 
         if (Schema::hasColumn('attendances', 'attendance_date')) {
             $query->whereDate('attendance_date', today());
@@ -96,12 +94,6 @@ if (! function_exists('attendance_today_count')) {
         }
 
         if ($type === 'login') {
-            if (Schema::hasColumn('attendances', 'type')) {
-                return (clone $query)
-                    ->whereIn('type', ['login', 'check_in', 'checkin', 'in'])
-                    ->count();
-            }
-
             foreach (['check_in_at', 'check_in', 'in_time'] as $column) {
                 if (Schema::hasColumn('attendances', $column)) {
                     return (clone $query)->whereNotNull($column)->count();
@@ -110,12 +102,6 @@ if (! function_exists('attendance_today_count')) {
         }
 
         if ($type === 'logout') {
-            if (Schema::hasColumn('attendances', 'type')) {
-                return (clone $query)
-                    ->whereIn('type', ['logout', 'check_out', 'checkout', 'out'])
-                    ->count();
-            }
-
             foreach (['check_out_at', 'check_out', 'out_time'] as $column) {
                 if (Schema::hasColumn('attendances', $column)) {
                     return (clone $query)->whereNotNull($column)->count();
@@ -167,24 +153,19 @@ if (! function_exists('employee_full_details')) {
                 'post',
                 'officeTime',
                 'supervisor',
-
                 'employeeAccount',
                 'employeeSalary',
                 'employeeLeaveTypes.leaveType',
-
                 'todayAttendances',
                 'attendances' => function ($query) {
                     attendance_apply_latest($query, ['attendance_date', 'date', 'created_at'])->limit(20);
                 },
-
                 'assetAssignments.asset',
                 'assets',
-
                 'leaveRequests.leaveType',
                 'timeLeaves' => function ($query) {
-                    attendance_apply_latest($query, ['date', 'leave_date', 'created_at']);
+                    attendance_apply_latest($query, ['issue_date', 'date', 'leave_date', 'created_at']);
                 },
-
                 'tadas' => function ($query) {
                     attendance_apply_latest($query, ['created_at']);
                 },
@@ -230,78 +211,12 @@ if (! function_exists('employee_full_details')) {
             'status' => true,
             'message' => 'Employee details loaded successfully.',
             'employee' => $employee,
-
-            'basic' => [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'email' => $employee->email,
-                'work_email' => $employee->work_email,
-                'phone' => $employee->phone,
-                'employee_code' => $employee->employee_code,
-                'status' => $employee->status,
-                'is_active' => $employee->is_active,
-                'employment_type' => $employee->employment_type,
-                'user_type' => $employee->user_type,
-                'joining_date' => $employee->joining_date,
-            ],
-
-            'company_details' => [
-                'company' => $employee->company,
-                'branch' => $employee->branch,
-                'department' => $employee->department,
-                'post' => $employee->post,
-                'supervisor' => $employee->supervisor,
-                'office_time' => $employee->officeTime,
-            ],
-
-            'salary_details' => [
-                'account' => $employee->employeeAccount,
-                'salary' => $employee->employeeSalary,
-                'payslips' => $employee->payslips,
-            ],
-
-            'leave_details' => [
-                'leave_types' => $employee->employeeLeaveTypes,
-                'leave_requests' => $employee->leaveRequests,
-                'time_leaves' => $employee->timeLeaves,
-            ],
-
-            'attendance_details' => [
-                'today' => $employee->todayAttendances,
-                'recent' => $employee->attendances,
-            ],
-
-            'asset_details' => [
-                'assignments' => $employee->assetAssignments,
-                'assets' => $employee->assets,
-            ],
-
-            'other_details' => [
-                'tadas' => $employee->tadas,
-                'advance_salaries' => $employee->advanceSalaries,
-                'awards' => $employee->awards,
-                'team_meetings' => $employee->teamMeetings,
-                'notices' => $employee->notices,
-            ],
-
-            'counts' => [
-                'attendances' => $employee->attendances_count,
-                'leave_requests' => $employee->leave_requests_count,
-                'time_leaves' => $employee->time_leaves_count,
-                'tadas' => $employee->tadas_count,
-                'advance_salaries' => $employee->advance_salaries_count,
-                'awards' => $employee->awards_count,
-                'payslips' => $employee->payslips_count,
-                'assets' => $employee->asset_assignments_count,
-                'team_meetings' => $employee->team_meetings_count,
-                'notices' => $employee->notices_count,
-            ],
         ];
     }
 }
 
-if (! function_exists('attendance_is_approved')) {
-    function attendance_is_approved($record): bool
+if (! function_exists('attendance_is_active_leave_status')) {
+    function attendance_is_active_leave_status($record): bool
     {
         $status = strtolower((string) attendance_pick_value($record, [
             'status',
@@ -310,24 +225,7 @@ if (! function_exists('attendance_is_approved')) {
             'request_status',
         ], ''));
 
-        if (in_array($status, ['approved', 'approve', 'accepted'], true)) {
-            return true;
-        }
-
-        if (in_array($status, ['pending', 'rejected', 'declined', 'cancelled', 'canceled'], true)) {
-            return false;
-        }
-
-        $isApproved = attendance_pick_value($record, [
-            'is_approved',
-            'approved',
-        ], null);
-
-        if ($isApproved !== null) {
-            return (int) $isApproved === 1;
-        }
-
-        return false;
+        return in_array($status, ['approved', 'approve', 'accepted', 'pending'], true);
     }
 }
 
@@ -335,6 +233,7 @@ if (! function_exists('attendance_record_covers_today')) {
     function attendance_record_covers_today($record, Carbon $today): bool
     {
         $from = attendance_pick_value($record, [
+            'issue_date',
             'from_date',
             'start_date',
             'leave_from',
@@ -346,6 +245,7 @@ if (! function_exists('attendance_record_covers_today')) {
         ]);
 
         $to = attendance_pick_value($record, [
+            'issue_date',
             'to_date',
             'end_date',
             'leave_to',
@@ -507,18 +407,6 @@ if (! function_exists('attendance_sessions_for_js')) {
             $checkIn = attendance_get_check_in($attendance);
             $checkOut = attendance_get_check_out($attendance);
 
-            try {
-                $inCarbon = $checkIn ? Carbon::parse($checkIn) : null;
-            } catch (\Throwable $e) {
-                $inCarbon = null;
-            }
-
-            try {
-                $outCarbon = $checkOut ? Carbon::parse($checkOut) : null;
-            } catch (\Throwable $e) {
-                $outCarbon = null;
-            }
-
             $attendanceDate = attendance_pick_value($attendance, [
                 'attendance_date',
                 'date',
@@ -526,10 +414,20 @@ if (! function_exists('attendance_sessions_for_js')) {
             ]);
 
             try {
-                $date = $inCarbon
-                    ? $inCarbon->format('Y-m-d')
-                    : ($attendanceDate ? Carbon::parse($attendanceDate)->format('Y-m-d') : now()->format('Y-m-d'));
+                $date = $attendanceDate
+                    ? Carbon::parse($attendanceDate)->format('Y-m-d')
+                    : now()->format('Y-m-d');
+
+                $inCarbon = $checkIn
+                    ? Carbon::parse($date . ' ' . Carbon::parse($checkIn)->format('H:i:s'))
+                    : null;
+
+                $outCarbon = $checkOut
+                    ? Carbon::parse($date . ' ' . Carbon::parse($checkOut)->format('H:i:s'))
+                    : null;
             } catch (\Throwable $e) {
+                $inCarbon = null;
+                $outCarbon = null;
                 $date = now()->format('Y-m-d');
             }
 
@@ -540,7 +438,7 @@ if (! function_exists('attendance_sessions_for_js')) {
                 'inEpochMs' => $inCarbon ? $inCarbon->timestamp * 1000 : 0,
                 'outEpochMs' => $outCarbon ? $outCarbon->timestamp * 1000 : null,
                 'durationMs' => ($inCarbon && $outCarbon)
-                    ? $outCarbon->diffInMilliseconds($inCarbon)
+                    ? abs($outCarbon->diffInMilliseconds($inCarbon, false))
                     : 0,
             ];
         })->values();
@@ -581,9 +479,6 @@ if (! function_exists('attendance_rules')) {
             $endAt->addDay();
         }
 
-        $effectiveStartAt = $startAt->copy();
-        $effectiveEndAt = $endAt->copy();
-
         $maxCheckIn = 3;
         $maxCheckOut = 3;
 
@@ -614,7 +509,7 @@ if (! function_exists('attendance_rules')) {
         $todayFullLeave = null;
 
         foreach (collect($employee->leaveRequests ?? []) as $leaveRequest) {
-            if (! attendance_is_approved($leaveRequest)) {
+            if (! attendance_is_active_leave_status($leaveRequest)) {
                 continue;
             }
 
@@ -633,7 +528,7 @@ if (! function_exists('attendance_rules')) {
         $shortLeaveWindows = [];
 
         $shortLeavesFromRequests = collect($employee->leaveRequests ?? [])->filter(function ($leaveRequest) use ($today) {
-            return attendance_is_approved($leaveRequest)
+            return attendance_is_active_leave_status($leaveRequest)
                 && attendance_record_covers_today($leaveRequest, $today)
                 && attendance_is_short_leave_record($leaveRequest);
         });
@@ -643,7 +538,7 @@ if (! function_exists('attendance_rules')) {
             ->merge($shortLeavesFromRequests);
 
         foreach ($possibleShortLeaves as $shortLeave) {
-            if (! attendance_is_approved($shortLeave)) {
+            if (! attendance_is_active_leave_status($shortLeave)) {
                 continue;
             }
 
@@ -662,26 +557,16 @@ if (! function_exists('attendance_rules')) {
             }
 
             $shortLeaveWindows[] = $window;
-
-            if ($window['start']->lessThanOrEqualTo($effectiveStartAt) && $window['end']->greaterThan($effectiveStartAt)) {
-                $effectiveStartAt = $window['end']->copy();
-            }
-
-            if ($window['start']->lessThan($effectiveEndAt) && $window['end']->greaterThanOrEqualTo($effectiveEndAt)) {
-                $effectiveEndAt = $window['start']->copy();
-            }
         }
 
         $isInsideShortLeave = collect($shortLeaveWindows)->contains(function ($window) use ($now) {
             return $now->betweenIncluded($window['start'], $window['end']);
         });
 
-        $hasValidOfficeWindow = $effectiveStartAt->lessThan($effectiveEndAt);
         $showAttendanceActions = ! $todayFullLeave;
 
         $isWithinOfficeTime = $showAttendanceActions
-            && $hasValidOfficeWindow
-            && $now->betweenIncluded($effectiveStartAt, $effectiveEndAt)
+            && $now->betweenIncluded($startAt, $endAt)
             && ! $isInsideShortLeave;
 
         $canCheckIn = $showAttendanceActions
@@ -695,22 +580,19 @@ if (! function_exists('attendance_rules')) {
             && $todayCheckOutCount < $maxCheckOut;
 
         if ($todayFullLeave) {
-            $checkInMessage = 'You are on approved leave today. Attendance is not required.';
-            $checkOutMessage = 'You are on approved leave today. Attendance is not required.';
+            $checkInMessage = 'You are on leave today. Attendance is not required.';
+            $checkOutMessage = 'You are on leave today. Attendance is not required.';
         } elseif ($isInsideShortLeave) {
             $activeWindow = collect($shortLeaveWindows)->first(function ($window) use ($now) {
                 return $now->betweenIncluded($window['start'], $window['end']);
             });
 
-            $shortLeaveText = $activeWindow['text'] ?? 'approved short leave time';
+            $shortLeaveText = $activeWindow['text'] ?? 'short leave time';
             $checkInMessage = 'You are on short leave from ' . $shortLeaveText . '.';
             $checkOutMessage = 'You are on short leave from ' . $shortLeaveText . '.';
-        } elseif (! $hasValidOfficeWindow) {
-            $checkInMessage = 'Today office attendance window is fully covered by approved short leave.';
-            $checkOutMessage = 'Today office attendance window is fully covered by approved short leave.';
-        } elseif (! $isWithinOfficeTime) {
-            $checkInMessage = 'Attendance allowed from ' . $effectiveStartAt->format('h:i A') . ' to ' . $effectiveEndAt->format('h:i A') . '.';
-            $checkOutMessage = 'Attendance allowed from ' . $effectiveStartAt->format('h:i A') . ' to ' . $effectiveEndAt->format('h:i A') . '.';
+        } elseif (! $now->betweenIncluded($startAt, $endAt)) {
+            $checkInMessage = 'Attendance allowed from ' . $startAt->format('h:i A') . ' to ' . $endAt->format('h:i A') . '.';
+            $checkOutMessage = 'Attendance allowed from ' . $startAt->format('h:i A') . ' to ' . $endAt->format('h:i A') . '.';
         } else {
             $checkInMessage = $canCheckIn
                 ? 'You can check in.'
@@ -743,13 +625,13 @@ if (! function_exists('attendance_rules')) {
                 'record' => $officeTime,
                 'original_opening_time' => $openingTime,
                 'original_closing_time' => $closingTime,
-                'opening_time' => $effectiveStartAt->format('H:i:s'),
-                'closing_time' => $effectiveEndAt->format('H:i:s'),
-                'start_at' => $effectiveStartAt->format('Y-m-d H:i:s'),
-                'end_at' => $effectiveEndAt->format('Y-m-d H:i:s'),
+                'opening_time' => $startAt->format('H:i:s'),
+                'closing_time' => $endAt->format('H:i:s'),
+                'start_at' => $startAt->format('Y-m-d H:i:s'),
+                'end_at' => $endAt->format('Y-m-d H:i:s'),
                 'current_time' => $now->format('Y-m-d H:i:s'),
                 'is_within_office_time' => $isWithinOfficeTime,
-                'has_valid_office_window' => $hasValidOfficeWindow,
+                'has_valid_office_window' => $startAt->lessThan($endAt),
             ],
 
             'limits' => [
@@ -782,3 +664,4 @@ if (! function_exists('attendance_rules')) {
         ];
     }
 }
+
