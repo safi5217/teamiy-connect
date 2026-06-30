@@ -82,9 +82,7 @@
                             @include('partials.status-badge', ['slot' => $isCompleted ? 'completed' : 'scheduled'])
                         </div>
 
-                        @if ($imageUrl)
-                            <img class="meeting-image" src="{{ $imageUrl }}" alt="{{ $meeting->title }}">
-                        @endif
+                       
 
                         @if ($meeting->description)
                             <div class="meeting-description">

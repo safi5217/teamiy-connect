@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/team-sheet', [TeamController::class, 'index'])->name('team.index');
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::patch('/tasks/{task}/toggle-status', [ProjectController::class, 'toggleTaskStatus'])
+    ->name('tasks.toggle-status');
     Route::get('/employee-assets', [AssetController::class, 'index'])->name('assets.index');
     Route::post('/employee-assets/{assetAssignment}/return-request', [AssetController::class, 'requestReturn'])->name('assets.return-request');
     Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
