@@ -1,3 +1,293 @@
-/* ===== Teamiy Connect — Profile Settings page styles =====
-   Shared design-system classes live in css/style.css.
-   Add styles unique to the Profile Settings page here. */
+/* ===== Teamiy Connect - Profile Settings page styles =====
+   Shared design-system classes live in css/style.css. */
+
+.settings-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 22px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #DCE6F2;
+    box-shadow: 0 10px 28px -24px rgba(15, 23, 42, .45);
+}
+
+.settings-identity {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 16px;
+}
+
+.settings-avatar {
+    width: 82px;
+    height: 82px;
+    border-radius: 18px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    border: 3px solid #E7F0FB;
+}
+
+.avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #057DB0, #16A6DE);
+}
+
+.settings-heading {
+    min-width: 0;
+}
+
+.settings-heading span,
+.settings-card-head span {
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.settings-heading h1 {
+    margin: 5px 0 0;
+    color: #0F172A;
+    font-size: 27px;
+    font-weight: 900;
+}
+
+.settings-heading p {
+    margin: 5px 0 0;
+    color: #64748B;
+    font-size: 13.5px;
+    font-weight: 700;
+}
+
+.settings-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    color: #64748B;
+    font-size: 12.5px;
+    font-weight: 800;
+}
+
+.settings-alert {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.settings-alert.success {
+    color: #0F766E;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+}
+
+.settings-alert.danger {
+    color: #B91C1C;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+}
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 18px;
+    margin-top: 18px;
+    align-items: start;
+}
+
+.settings-form,
+.settings-summary {
+    padding: 20px;
+}
+
+.settings-side {
+    display: grid;
+    gap: 18px;
+}
+
+.settings-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.settings-card-head.slim {
+    margin-bottom: 14px;
+}
+
+.settings-card-head h2 {
+    margin: 3px 0 0;
+    color: #0F172A;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.settings-photo-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid #E6EEF7;
+    border-radius: 12px;
+    background: #F8FAFC;
+    margin-bottom: 16px;
+}
+
+.settings-photo-preview {
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+
+.settings-upload {
+    display: grid;
+    gap: 4px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.settings-upload small {
+    color: #94A3B8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.settings-upload input {
+    margin-top: 8px;
+    color: #64748B;
+    font-size: 12.5px;
+}
+
+.settings-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.settings-form label,
+.settings-wide-field {
+    display: grid;
+    gap: 7px;
+    color: #475569;
+    font-size: 12.5px;
+    font-weight: 900;
+}
+
+.settings-form input,
+.settings-form select,
+.settings-form textarea {
+    width: 100%;
+    border: 1.5px solid #DCE6F2;
+    border-radius: 10px;
+    background: #fff;
+    color: #1E293B;
+    font: inherit;
+    font-weight: 700;
+    outline: none;
+}
+
+.settings-form input,
+.settings-form select {
+    height: 42px;
+    padding: 0 12px;
+}
+
+.settings-form textarea {
+    min-height: 104px;
+    padding: 11px 12px;
+    resize: vertical;
+}
+
+.settings-form input:focus,
+.settings-form select:focus,
+.settings-form textarea:focus {
+    border-color: #057DB0;
+    box-shadow: 0 0 0 3px rgba(5, 125, 176, .12);
+}
+
+.settings-wide-field {
+    margin-top: 14px;
+}
+
+.settings-form-actions {
+    display: none;
+    margin-top: 16px;
+}
+
+.settings-info-list {
+    display: grid;
+    gap: 10px;
+}
+
+.settings-info-list div {
+    min-width: 0;
+    padding: 11px 12px;
+    border-radius: 10px;
+    border: 1px solid #E6EEF7;
+    background: #F8FAFC;
+}
+
+.settings-info-list span {
+    display: block;
+    color: #94A3B8;
+    font-size: 10.5px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.settings-info-list strong {
+    display: block;
+    margin-top: 4px;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 1040px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .settings-hero,
+    .settings-card-head,
+    .settings-photo-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .settings-hero-meta {
+        justify-content: flex-start;
+    }
+
+    .settings-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-card-head > .btn {
+        display: none;
+    }
+
+    .settings-form-actions {
+        display: block;
+    }
+}

@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [ProfileController::class, 'show'])->name('settings.index');
+    Route::put('/settings', [ProfileController::class, 'update'])->name('settings.update');
 
     Route::get('/resignation', [ResignationController::class, 'index'])->name('resignation.index');
     Route::post('/resignation', [ResignationController::class, 'store'])->name('resignation.store');
