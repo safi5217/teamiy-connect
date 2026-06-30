@@ -1,3 +1,249 @@
-/* ===== Teamiy Connect — Notices page styles =====
-   Shared design-system classes live in css/style.css.
-   Add styles unique to the Notices page here. */
+/* ===== Teamiy Connect - Notices page styles =====
+   Shared design-system classes live in css/style.css. */
+
+.notice-stat-card {
+    padding: 16px;
+}
+
+.notice-stat-card span {
+    display: block;
+    color: #64748B;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.notice-stat-card strong {
+    display: block;
+    margin-top: 6px;
+    color: #1E293B;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.notice-stat-card .text-green {
+    color: #16A34A;
+}
+
+.notice-stat-card .text-blue {
+    color: #057DB0;
+}
+
+.notice-stat-card .text-orange {
+    color: #B26A00;
+}
+
+.notice-list {
+    display: grid;
+    gap: 16px;
+}
+
+.notice-card {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px;
+}
+
+.notice-date {
+    width: 64px;
+    height: 74px;
+    border-radius: 16px;
+    background: #FEF3E2;
+    color: #B26A00;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.notice-date .d {
+    font-size: 25px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.notice-date .m {
+    margin-top: 5px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.notice-body {
+    min-width: 0;
+}
+
+.notice-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notice-title-block {
+    min-width: 0;
+}
+
+.notice-title-block h3 {
+    margin: 0;
+    color: #0F172A;
+    font-size: 17px;
+    font-weight: 900;
+}
+
+.notice-title-block p {
+    margin: 4px 0 0;
+    color: #64748B;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.notice-description {
+    margin-top: 12px;
+    color: #64748B;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.notice-section-label {
+    margin-top: 16px;
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.notice-details {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.notice-details div {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #E6EEF7;
+    border-radius: 10px;
+    background: #F8FAFC;
+}
+
+.notice-details span {
+    display: block;
+    color: #94A3B8;
+    font-size: 10.5px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.notice-details strong {
+    display: block;
+    margin-top: 4px;
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notice-receivers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.notice-receiver {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #E6EEF7;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.notice-receiver > span {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #E7F0FB;
+    color: #057DB0;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.notice-receiver div {
+    min-width: 0;
+}
+
+.notice-receiver strong,
+.notice-receiver small {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notice-receiver strong {
+    color: #334155;
+    font-size: 12.5px;
+    font-weight: 900;
+}
+
+.notice-receiver small {
+    margin-top: 2px;
+    color: #94A3B8;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.notice-receiver.muted {
+    color: #94A3B8;
+    font-size: 12.5px;
+    font-weight: 800;
+}
+
+.notice-more {
+    margin-top: 8px;
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .notice-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .notice-card {
+        grid-template-columns: 1fr;
+    }
+
+    .notice-date {
+        width: 100%;
+        height: 58px;
+        flex-direction: row;
+        gap: 6px;
+    }
+
+    .notice-head {
+        align-items: flex-start;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .notice-details,
+    .notice-receivers {
+        grid-template-columns: 1fr;
+    }
+}

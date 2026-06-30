@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssetAssignment extends Model
 {
@@ -16,13 +17,23 @@ class AssetAssignment extends Model
         ];
     }
 
-    public function employee()
+    public function employee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function asset()
+    public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class, 'asset_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
     }
 }

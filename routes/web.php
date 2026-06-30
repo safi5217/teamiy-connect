@@ -45,7 +45,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/status', [AttendanceController::class, 'status'])->name('attendance.status');
@@ -61,7 +61,8 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/team-sheet', [TeamController::class, 'index'])->name('team.index');
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::get('/employee-assets', [AssetController::class, 'index'])->name('assets.index');
+    Route::post('/employee-assets/{assetAssignment}/return-request', [AssetController::class, 'requestReturn'])->name('assets.return-request');
     Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
     Route::get('/notices', [NoticeController::class, 'index'])->name('notices.index');
     Route::get('/meetings', [MeetingController::class, 'index'])->name('meetings.index');
@@ -75,6 +76,3 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
-
-
-

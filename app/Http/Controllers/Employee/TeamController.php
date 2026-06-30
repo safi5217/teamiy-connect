@@ -18,7 +18,7 @@ class TeamController extends Controller
         return view('team.index', [
             'employee' => $employee,
             'members' => User::query()
-                ->with(['branch', 'department', 'post'])
+                ->with(['branch', 'department', 'post', 'supervisor'])
                 ->where('company_id', $employee->company_id)
                 ->where('is_active', true)
                 ->whereNull('deleted_at')

@@ -1333,6 +1333,9 @@
             return window.TEAMIY_ROUTES[view];
         }
 
+        if (view === "assets") return "/employee-assets";
+        if (view === "team") return "/team-sheet";
+
         return view === "dashboard" ? "/dashboard" : "/" + view;
     }
     TC.pageHref = pageHref;

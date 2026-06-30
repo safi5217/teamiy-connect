@@ -250,7 +250,7 @@
             </div>
 
             {{-- ASSETS CARD --}}
-            <div class="card card-pad clickable" onclick="window.location.href='{{ url('/assets') }}'">
+            <div class="card card-pad clickable" onclick="window.location.href='{{ route('assets.index') }}'">
                 <div class="spread">
                     <span class="lbl">My Assets</span>
 
